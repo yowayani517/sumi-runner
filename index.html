@@ -28,6 +28,39 @@
     border-radius: 50%; border: 4px solid #14120e; background: rgba(233,223,200,.6); color: #14120e;
     font-size: 22px; font-weight: bold; pointer-events: auto; font-family: inherit; }
 
+  /* ===== 音声トグル(初期は×=無音) ===== */
+  #audio-btns { position: fixed; top: calc(max(12px, env(safe-area-inset-top)) + 66px); left: 14px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 5; }
+  .audio-btn { pointer-events: auto; font-family: inherit; display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 4px 14px 4px 14px; border: 3px solid #14120e;
+    background: rgba(233,223,200,.75); color: #14120e; font-size: 14px; font-weight: bold; letter-spacing: 1px; }
+  .audio-btn .state { font-size: 16px; width: 18px; text-align: center; }
+  .audio-btn.off { opacity: .55; }
+
+  /* ===== タイトルの記録表示・ショップ ===== */
+  #title-stats { font-size: 17px; color: #14120e; letter-spacing: 2px; }
+  #title-stats b { font-size: 21px; }
+  .sub-btn { pointer-events: auto; font-family: inherit; font-size: 17px; letter-spacing: 4px; padding: 9px 30px;
+    color: #14120e; background: transparent; border: 3px solid #14120e; border-radius: 4px 18px 4px 18px; }
+  #shop-list { display: flex; flex-direction: column; gap: 12px; width: min(86vw, 420px); }
+  .shop-item { display: flex; align-items: center; gap: 12px; background: rgba(233,223,200,.85);
+    border: 3px solid #14120e; border-radius: 4px 18px 4px 18px; padding: 10px 14px; color: #14120e; }
+  .shop-item .icon { font-size: 30px; }
+  .shop-item .info { flex: 1; text-align: left; }
+  .shop-item .name { font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+  .shop-item .desc { font-size: 12px; color: #3a352b; }
+  .shop-item button { pointer-events: auto; font-family: inherit; font-size: 14px; font-weight: bold; padding: 8px 14px;
+    color: #f0e8d4; background: #14120e; border: none; border-radius: 4px 12px 4px 12px; white-space: nowrap; }
+  .shop-item button:disabled { opacity: .45; }
+  #shop-coins { font-size: 18px; color: #14120e; letter-spacing: 2px; }
+
+  /* ===== ベスト更新バー ===== */
+  #best-banner { position: fixed; top: 34%; left: 50%; transform: translateX(-50%) scale(.6); opacity: 0;
+    background: #14120e; color: #f0e8d4; font-size: 24px; letter-spacing: 6px; padding: 12px 34px;
+    border-radius: 6px 24px 6px 24px; box-shadow: 3px 4px 0 rgba(20,18,14,.3); pointer-events: none; z-index: 20;
+    transition: transform .45s cubic-bezier(.2,1.6,.4,1), opacity .3s; }
+  #best-banner.show { transform: translateX(-50%) scale(1); opacity: 1; }
+
   /* ===== overlays ===== */
   .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 22px; background: radial-gradient(ellipse at center, rgba(233,223,200,.55), rgba(210,196,166,.92)); z-index: 10; }
@@ -52,13 +85,26 @@
     <div class="ink-chip" id="coins"><span class="zeni"></span><span id="coin-count">0</span></div>
   </div>
   <button id="pause-btn">II</button>
+  <div id="audio-btns">
+    <button class="audio-btn off" id="bgm-btn">♪ BGM <span class="state">×</span></button>
+    <button class="audio-btn off" id="sfx-btn">✦ 効果音 <span class="state">×</span></button>
+  </div>
   <div id="dragon-banner">竜翔</div>
+  <div id="best-banner">✨ ベストスコア更新!</div>
 </div>
 <div class="overlay" id="title-overlay">
   <h1>墨ランナー</h1>
   <div class="sub">左右スワイプで移動 ・ 上で跳躍 ・ 下で滑り</div>
   <div class="sub">巻物を取れば竜が現れる</div>
+  <div id="title-stats"></div>
   <button class="brush-btn" id="start-btn">走 る</button>
+  <button class="sub-btn" id="shop-btn">店</button>
+</div>
+<div class="overlay hidden" id="shop-overlay">
+  <h1 style="font-size:44px">店</h1>
+  <div id="shop-coins"></div>
+  <div id="shop-list"></div>
+  <button class="sub-btn" id="shop-close-btn">戻 る</button>
 </div>
 <div class="overlay hidden" id="gameover-overlay">
   <h1 style="font-size:48px">力尽きた</h1>

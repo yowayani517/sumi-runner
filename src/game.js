@@ -39,8 +39,13 @@ function makeGroundTexture() {
 }
 
 export class Game {
-  constructor(container, hud) {
+  constructor(container, hud, audio) {
     this.hud = hud;
+    this.audio = audio;
+    this.items = {};       // 購入済み強化(start時にmain.jsから渡される)
+    this.coinMult = 1;
+    this.shield = 0;
+    this.dragonTime = DRAGON_TIME;
     // capture=1 の時だけpreserveDrawingBufferを有効化(デバッグ用スクショ)
     const capture = new URLSearchParams(location.search).has('capture');
     this.renderer = new THREE.WebGLRenderer({ antialias: false, preserveDrawingBuffer: capture, powerPreference: 'high-performance' });
@@ -267,9 +272,14 @@ export class Game {
     if (this.dragon) this.dragon.visible = false;
   }
 
-  start() {
+  start(items = this.items) {
+    this.items = items;
     this.reset();
     this.state = 'run';
+    // 強化アイテムの効果
+    this.coinMult = items.maneki ? 2 : 1;
+    this.shield = items.omamori ? 1 : 0;
+    this.dragonTime = DRAGON_TIME + (items.uroko ? 3 : 0);
     if (this.mixer) {
       this.mixer.stopAllAction();
       this.runAction.reset().play();
@@ -296,10 +306,12 @@ export class Game {
       if (wallAhead) { this.climbing = 0.55; this.climbWall = wallAhead; }
       else this.vy = 9.2;
       this.sliding = 0;
+      this.audio?.jump();
     }
     if (dir === 'down') {
       if (this.y > 0.01) this.vy = -18; // 空中なら急降下
       this.sliding = 0.6;
+      this.audio?.slide();
     }
   }
 
@@ -354,7 +366,8 @@ export class Game {
   // ===== 竜モード =====
   mountDragon() {
     this.state = 'dragon';
-    this.dragonT = DRAGON_TIME;
+    this.dragonT = this.dragonTime;
+    this.audio?.ultimate();
     this.dragon.visible = true;
     this.hud.banner(true);
     if (this.aura) this.aura.visible = true; // 墨のオーラ発動
@@ -503,7 +516,16 @@ export class Game {
           case 'torii':   hit = this.sliding <= 0 && py < 1.2; break; // くぐる
           case 'wall':    hit = py < 2.4 && this.climbing <= 0; break; // 登る
         }
-        if (hit) { this.die(); return; }
+        if (hit) {
+          // お守り: 一度だけ被弾を無効化
+          if (this.shield > 0) {
+            this.shield--;
+            this.invincible = INVINCIBLE_TIME;
+            this.audio?.shield();
+            continue;
+          }
+          this.die(); return;
+        }
       }
     }
     for (let i = this.pools.coins.length - 1; i >= 0; i--) {
@@ -512,7 +534,9 @@ export class Game {
       c.t += dt; c.mesh.rotation.y = c.t * 3;
       const d2 = (c.mesh.position.x - px) ** 2 + (c.mesh.position.y - 0.35 - py) ** 2;
       if (c.mesh.position.z > -1 && c.mesh.position.z < 1 && d2 < 1.1) {
-        this.coins++; this.release('coin', c.mesh); this.pools.coins.splice(i, 1); continue;
+        this.coins += this.coinMult;
+        this.audio?.coin();
+        this.release('coin', c.mesh); this.pools.coins.splice(i, 1); continue;
       }
       if (c.mesh.position.z > 8) { this.release('coin', c.mesh); this.pools.coins.splice(i, 1); }
     }
@@ -543,6 +567,7 @@ export class Game {
 
   die() {
     if (this.state === 'dying' || this.state === 'dead') return;
+    this.audio?.knock();
     this.dragon.visible = false;
     this.hud.banner(false);
     if (this.aura) this.aura.visible = false;

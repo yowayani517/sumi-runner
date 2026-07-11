@@ -1,6 +1,19 @@
 import { Game } from './game.js';
+import { AudioManager } from './audio.js';
+import { save, SHOP_ITEMS } from './save.js';
 
 const $ = id => document.getElementById(id);
+
+// ===== 音声(初期は必ず無音・×表示。ユーザーが触って初めて解禁) =====
+const audio = new AudioManager();
+function bindAudioBtn(btn, get, set) {
+  btn.onclick = () => {
+    const next = !get();
+    set(next);
+    btn.querySelector('.state').textContent = next ? '○' : '×';
+    btn.classList.toggle('off', !next);
+  };
+}
 
 const hud = {
   update(score, coins) {
@@ -9,19 +22,68 @@ const hud = {
   },
   banner(show) { $('dragon-banner').style.opacity = show ? 1 : 0; },
   gameover(score, coins, dist) {
-    $('result').innerHTML = `距離 ${dist} 間<br>銭 ${coins} 枚<br>総合 ${score.toLocaleString()} 点`;
+    // 永続化: 累計銭に加算、ベスト更新判定
+    const isBest = save.commitRun(score, coins);
+    $('result').innerHTML =
+      `距離 ${dist} 間<br>銭 ${coins} 枚 <span style="font-size:16px">(累計 ${save.totalCoins.toLocaleString()})</span><br>` +
+      `総合 ${score.toLocaleString()} 点<br><span style="font-size:16px">ベスト ${save.best.toLocaleString()} 点</span>`;
     $('gameover-overlay').classList.remove('hidden');
+    if (isBest) {
+      // ベスト更新バー+「ぽおん」
+      audio.pon();
+      const b = $('best-banner');
+      b.classList.add('show');
+      setTimeout(() => b.classList.remove('show'), 2600);
+    }
+    renderTitleStats();
   },
 };
 
-const game = new Game($('app'), hud);
+const game = new Game($('app'), hud, audio);
 window.__game = game;
 let paused = false;
 
 await game.loadAssets();
 
-$('start-btn').onclick = () => { $('title-overlay').classList.add('hidden'); game.start(); };
-$('retry-btn').onclick = () => { $('gameover-overlay').classList.add('hidden'); game.start(); };
+// ===== タイトルの記録表示 =====
+function renderTitleStats() {
+  $('title-stats').innerHTML =
+    `ベスト <b>${save.best.toLocaleString()}</b> 点 ・ 銭 <b>${save.totalCoins.toLocaleString()}</b> 枚`;
+}
+renderTitleStats();
+
+// ===== ショップ =====
+function renderShop() {
+  $('shop-coins').textContent = `所持銭: ${save.totalCoins.toLocaleString()} 枚`;
+  const list = $('shop-list');
+  list.innerHTML = '';
+  for (const item of SHOP_ITEMS) {
+    const owned = !!save.items[item.id];
+    const el = document.createElement('div');
+    el.className = 'shop-item';
+    el.innerHTML = `
+      <div class="icon">${item.icon}</div>
+      <div class="info"><div class="name">${item.name}</div><div class="desc">${item.desc}</div></div>
+      <button ${owned || save.totalCoins < item.price ? 'disabled' : ''}>
+        ${owned ? '所持済' : item.price + ' 銭'}</button>`;
+    el.querySelector('button').onclick = () => {
+      if (save.buy(item.id, item.price)) {
+        audio.buy();
+        renderShop();
+        renderTitleStats();
+      }
+    };
+    list.appendChild(el);
+  }
+}
+$('shop-btn').onclick = () => { renderShop(); $('title-overlay').classList.add('hidden'); $('shop-overlay').classList.remove('hidden'); };
+$('shop-close-btn').onclick = () => { $('shop-overlay').classList.add('hidden'); $('title-overlay').classList.remove('hidden'); };
+
+bindAudioBtn($('bgm-btn'), () => audio.bgmOn, v => audio.setBgm(v));
+bindAudioBtn($('sfx-btn'), () => audio.sfxOn, v => audio.setSfx(v));
+
+$('start-btn').onclick = () => { $('title-overlay').classList.add('hidden'); game.start(save.items); };
+$('retry-btn').onclick = () => { $('gameover-overlay').classList.add('hidden'); game.start(save.items); };
 $('pause-btn').onclick = () => { if (game.state === 'run' || game.state === 'dragon') { paused = true; $('pause-overlay').classList.remove('hidden'); } };
 $('resume-btn').onclick = () => { paused = false; $('pause-overlay').classList.add('hidden'); };
 
