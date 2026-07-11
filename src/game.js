@@ -142,7 +142,8 @@ export class Game {
         if (c.name === 'Leap_of_Faith') c.tracks = c.tracks.filter(t => !/\.position$/.test(t.name));
         this.actions[c.name] = this.mixer.clipAction(c);
       }
-      this.runAction = this.actions['Running'] ?? this.actions[animated.clips.find(c => /run/i.test(c.name))?.name] ?? this.actions[animated.clips[0].name];
+      // RunFastが最も疾走感のあるフォーム(Runningはガニ股気味)
+      this.runAction = this.actions['RunFast'] ?? this.actions['Running'] ?? this.actions[animated.clips.find(c => /run/i.test(c.name))?.name] ?? this.actions[animated.clips[0].name];
       this.jumpAction = this.actions['Jump_Run'] ?? null;
       this.leapAction = this.actions['Leap_of_Faith'] ?? null;   // 竜騎乗: 信仰の飛躍
       this.knockAction = this.actions['Knock_Down'] ?? null;     // 被弾: ノックダウン
