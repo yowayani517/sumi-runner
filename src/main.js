@@ -6,14 +6,27 @@ const $ = id => document.getElementById(id);
 
 // ===== 音声(初期は必ず無音・×表示。ユーザーが触って初めて解禁) =====
 const audio = new AudioManager();
-function bindAudioBtn(btn, get, set) {
+// 音量スライダーの値だけ永続化(ON/OFFは常に×から)
+const VOL_KEY = 'sumi-runner-vol';
+try {
+  const v = JSON.parse(localStorage.getItem(VOL_KEY)) ?? {};
+  if (v.bgm != null) { audio.bgmVol = v.bgm; $('bgm-vol').value = v.bgm * 100; }
+  if (v.sfx != null) { audio.sfxVol = v.sfx; $('sfx-vol').value = v.sfx * 100; }
+} catch { }
+function saveVol() {
+  try { localStorage.setItem(VOL_KEY, JSON.stringify({ bgm: audio.bgmVol, sfx: audio.sfxVol })); } catch { }
+}
+function bindAudioBtn(btn, slider, get, set) {
   btn.onclick = () => {
     const next = !get();
     set(next);
     btn.querySelector('.state').textContent = next ? '○' : '×';
     btn.classList.toggle('off', !next);
+    slider.disabled = !next;
   };
 }
+$('bgm-vol').addEventListener('input', e => { audio.setBgmVolume(e.target.value / 100); saveVol(); });
+$('sfx-vol').addEventListener('input', e => { audio.setSfxVolume(e.target.value / 100); saveVol(); });
 
 const hud = {
   update(score, coins) {
@@ -79,8 +92,8 @@ function renderShop() {
 $('shop-btn').onclick = () => { renderShop(); $('title-overlay').classList.add('hidden'); $('shop-overlay').classList.remove('hidden'); };
 $('shop-close-btn').onclick = () => { $('shop-overlay').classList.add('hidden'); $('title-overlay').classList.remove('hidden'); };
 
-bindAudioBtn($('bgm-btn'), () => audio.bgmOn, v => audio.setBgm(v));
-bindAudioBtn($('sfx-btn'), () => audio.sfxOn, v => audio.setSfx(v));
+bindAudioBtn($('bgm-btn'), $('bgm-vol'), () => audio.bgmOn, v => audio.setBgm(v));
+bindAudioBtn($('sfx-btn'), $('sfx-vol'), () => audio.sfxOn, v => audio.setSfx(v));
 
 $('start-btn').onclick = () => { $('title-overlay').classList.add('hidden'); game.start(save.items); };
 $('retry-btn').onclick = () => { $('gameover-overlay').classList.add('hidden'); game.start(save.items); };

@@ -7,6 +7,8 @@ export class AudioManager {
     this.ctx = null;
     this.bgmOn = false;
     this.sfxOn = false;
+    this.bgmVol = 0.6; // スライダー値 0..1
+    this.sfxVol = 0.8;
     this._bgmTimer = null;
     this._step = 0;
     this._mi = 2; // メロディの現在位置
@@ -16,32 +18,40 @@ export class AudioManager {
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC();
+      // コンプレッサーで音圧を稼ぎつつクリップを防ぐ
+      this.comp = this.ctx.createDynamicsCompressor();
+      this.comp.threshold.value = -14;
+      this.comp.ratio.value = 6;
+      this.comp.connect(this.ctx.destination);
       this.master = this.ctx.createGain();
-      this.master.gain.value = 1;
-      this.master.connect(this.ctx.destination);
+      this.master.gain.value = 1.6;
+      this.master.connect(this.comp);
       this.bgmGain = this.ctx.createGain();
-      this.bgmGain.gain.value = 0.0001;
+      this.bgmGain.gain.value = 0;
       this.bgmGain.connect(this.master);
       this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.value = 0.0001;
+      this.sfxGain.gain.value = 0;
       this.sfxGain.connect(this.master);
     }
     if (this.ctx.state === 'suspended') this.ctx.resume();
   }
 
-  // ===== ON/OFF (最小音量からスライドして上げる) =====
+  _bgmTarget() { return this.bgmVol * 0.9; }
+  _sfxTarget() { return this.sfxVol * 1.3; }
+
+  // ===== ON/OFF (最小音量からリニアに伸ばして上げる) =====
   setBgm(on) {
     this._ensure();
     this.bgmOn = on;
     const g = this.bgmGain.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t);
-    g.setValueAtTime(Math.max(g.value, 0.0001), t);
+    g.setValueAtTime(g.value, t);
     if (on) {
-      g.exponentialRampToValueAtTime(0.32, t + 3.0); // 3秒かけて育てる
+      g.linearRampToValueAtTime(this._bgmTarget(), t + 2.0); // 小さい音から2秒で育つ
       this._startBgm();
     } else {
-      g.exponentialRampToValueAtTime(0.0001, t + 0.5);
-      setTimeout(() => this._stopBgm(), 600);
+      g.linearRampToValueAtTime(0, t + 0.4);
+      setTimeout(() => this._stopBgm(), 500);
     }
   }
 
@@ -50,8 +60,29 @@ export class AudioManager {
     this.sfxOn = on;
     const g = this.sfxGain.gain, t = this.ctx.currentTime;
     g.cancelScheduledValues(t);
-    g.setValueAtTime(Math.max(g.value, 0.0001), t);
-    g.exponentialRampToValueAtTime(on ? 0.9 : 0.0001, t + (on ? 1.2 : 0.3));
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(on ? this._sfxTarget() : 0, t + (on ? 1.0 : 0.3));
+  }
+
+  // ===== 音量スライダー =====
+  setBgmVolume(v) {
+    this.bgmVol = v;
+    if (this.ctx && this.bgmOn) {
+      const g = this.bgmGain.gain, t = this.ctx.currentTime;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(this._bgmTarget(), t + 0.15);
+    }
+  }
+
+  setSfxVolume(v) {
+    this.sfxVol = v;
+    if (this.ctx && this.sfxOn) {
+      const g = this.sfxGain.gain, t = this.ctx.currentTime;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(g.value, t);
+      g.linearRampToValueAtTime(this._sfxTarget(), t + 0.15);
+    }
   }
 
   // ===== 共通部品 =====
