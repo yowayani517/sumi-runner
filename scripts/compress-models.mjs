@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const MODELS = path.join(__dirname, '..', 'public', 'models');
+const MODELS = path.join(__dirname, '..', 'src', 'models');
 const RAW = path.join(__dirname, '..', 'assets_raw');
 fs.mkdirSync(RAW, { recursive: true });
 

@@ -33,13 +33,24 @@
 
 キーボード(開発用): 矢印キー / WASD / Space
 
-## 遊び方(開発環境)
+## 遊ぶ
+
+### いますぐ遊ぶ(サーバー不要)
+
+`dist/index.html` を**ブラウザにドラッグ&ドロップ、またはダブルクリック**するだけ。
+3Dモデル・音・スクリプトを全て1ファイルに埋め込んだ単一HTMLなので、ネット接続もサーバーも不要でオフラインで動きます。
+
+> ⚠️ 開発用の `index.html`(ソース)は `file://` で直接開いても動きません。Viteのバンドルが必要なため、必ず `dist/index.html` を開いてください。
+
+### 開発環境で動かす
 
 ```bash
 npm install
-cp .env.example .env   # Meshy APIキーを設定(アセット再生成する場合のみ)
-npm run dev            # http://localhost:5173
+npm run dev            # http://localhost:5173 (ソースをホットリロード)
+npm run build          # dist/index.html を1ファイルに再生成
 ```
+
+Meshyでアセットを再生成する場合のみ `cp .env.example .env` してAPIキーを設定。
 
 ## アセットパイプライン
 
@@ -52,7 +63,7 @@ node scripts/rig-runner.mjs # キャラをRemesh→リギング→走り/歩き�
 npm run compress            # テクスチャ512px WebP化+ポリゴン簡略化+量子化
 ```
 
-- 生成した元データは `assets_raw/` に退避され、`public/models/` には圧縮版が置かれます
+- 生成した元データは `assets_raw/` に退避され、`src/models/` には圧縮版が置かれます(ビルド時に単一HTMLへ inline される)
 - 主人公 `hero.glb` は Meshy のアニメーションライブラリから Running / Jump_Run / Leap_of_Faith / Knock_Down などを結合したもの
 
 ## 技術スタック
@@ -60,7 +71,7 @@ npm run compress            # テクスチャ512px WebP化+ポリゴン簡略化
 | 領域 | 採用技術 |
 |---|---|
 | レンダリング | [Three.js](https://threejs.org/) (WebGL) |
-| ビルド | [Vite](https://vitejs.dev/) |
+| ビルド | [Vite](https://vitejs.dev/) + vite-plugin-singlefile(全アセットを1つのHTMLに inline) |
 | 3Dアセット生成 | Meshy AI (text-to-3D / Remesh / Rigging / Animation API) |
 | アセット最適化 | [glTF-Transform](https://gltf-transform.dev/) (WebP・quantize・simplify) |
 | GIF録画(開発用) | gifenc |

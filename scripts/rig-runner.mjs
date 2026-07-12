@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const OUT_DIR = path.join(__dirname, '..', 'public', 'models');
+const OUT_DIR = path.join(__dirname, '..', 'src', 'models');
 const BASE = process.env.MESHY_API_BASE_URL || 'https://api.meshy.ai';
 const KEY = process.env.MESHY_API_KEY;
 const RUNNER_TASK = '019f50ca-76e6-7a95-968a-114dba817c5e'; // refine済みrunner

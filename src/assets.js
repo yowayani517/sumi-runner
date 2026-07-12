@@ -6,6 +6,16 @@ const loader = new GLTFLoader();
 export const INK = 0x14120e;      // 墨色
 export const WASHI = 0xe9dfc8;    // 和紙色
 
+// モデルをViteにバンドルさせる。build時はassetsInlineLimitでdata URI化され
+// 単一HTMLに埋め込まれるので file:// でも動く。dev時は普通のURLになる。
+const MODEL_URLS = import.meta.glob('./models/*.glb', { eager: true, query: '?url', import: 'default' });
+function modelUrl(name) {
+  for (const key in MODEL_URLS) {
+    if (key.endsWith(`/${name}.glb`)) return MODEL_URLS[key];
+  }
+  return null;
+}
+
 export const inkMat = (color = INK, opacity = 1) =>
   new THREE.MeshToonMaterial({ color, transparent: opacity < 1, opacity });
 
@@ -39,7 +49,9 @@ export async function loadModel(name, targetSize, fallback) {
   if (cache[name]) return cache[name].scene.clone();
   let group;
   try {
-    const gltf = await loader.loadAsync(`/models/${name}.glb`);
+    const url = modelUrl(name);
+    if (!url) throw new Error(`model not found: ${name}`);
+    const gltf = await loader.loadAsync(url);
     group = gltf.scene;
     optimize(group);
     // サイズ正規化(最大辺をtargetSizeに)・接地(y=0が底)
@@ -64,7 +76,9 @@ export async function loadModel(name, targetSize, fallback) {
 // アニメーション付きGLBを読む(runner_run等)。無ければnull
 export async function loadAnimated(name, targetSize) {
   try {
-    const gltf = await loader.loadAsync(`/models/${name}.glb`);
+    const url = modelUrl(name);
+    if (!url) throw new Error(`model not found: ${name}`);
+    const gltf = await loader.loadAsync(url);
     const group = gltf.scene;
     optimize(group);
     const box = new THREE.Box3().setFromObject(group);
