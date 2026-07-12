@@ -147,6 +147,11 @@ export class Game {
       this.jumpAction = this.actions['Jump_Run'] ?? null;
       this.leapAction = this.actions['Leap_of_Faith'] ?? null;   // 竜騎乗: 信仰の飛躍
       this.knockAction = this.actions['Knock_Down'] ?? null;     // 被弾: ノックダウン
+      // スライディング専用: 走りクリップを複製した独立アクションを固定ポーズで使う。
+      // (runActionと同一実体を凍結すると走りごと止まるため必ず複製する)
+      const slideClip = this.runAction.getClip().clone();
+      slideClip.name = 'SlidePose';
+      this.slideAction = this.mixer.clipAction(slideClip);
       if (this.leapAction) { this.leapAction.setLoop(THREE.LoopOnce); this.leapAction.clampWhenFinished = true; }
       if (this.knockAction) { this.knockAction.setLoop(THREE.LoopOnce); this.knockAction.clampWhenFinished = true; }
       this.currentAction = this.runAction;
@@ -443,18 +448,22 @@ export class Game {
       this.playerModel.position.y = this.mixer ? 0 : Math.abs(Math.sin(this.time * 11)) * 0.09;
     }
     // アニメーション状態マシン
-    // スライディングは走りアニメを流したまま体を寝かせて表現する(専用ポーズ固定はしない)。
-    // RunFastを凍結すると走りアクションと同一実体のため脚が止まってしまうため。
     if (this.mixer) {
       let desired = this.runAction;
       let scale = this.speed / 10; // 走りは速度連動
       if (this.state === 'dragon' && this.leapAction) {
         desired = this.leapAction; scale = 1;
+      } else if (this.sliding > 0 && this.slideAction && this.state === 'run') {
+        desired = this.slideAction; scale = 1; // スライディング: 固定ポーズ(独立実体)
       } else if (this.jumpAction && this.state === 'run' && this.y > 0.05 && this.climbing <= 0) {
         desired = this.jumpAction; scale = 1;
       }
       if (desired && this.currentAction !== desired) {
         desired.reset().crossFadeFrom(this.currentAction, desired === this.leapAction ? 0.35 : 0.12, false).play();
+        // スライディング: 走りポーズの脚を伸ばした瞬間で固定(体はrotationで寝かせる)
+        if (desired === this.slideAction) {
+          desired.time = desired.getClip().duration * 0.3; desired.paused = true;
+        }
         // 信仰の飛躍: 終盤のスカイダイビングポーズ(4.6s)へ即移行→キープ
         if (desired === this.leapAction && this.state === 'dragon') {
           desired.time = 4.6; desired.paused = true;
