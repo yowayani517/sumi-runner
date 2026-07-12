@@ -89,8 +89,18 @@ function renderShop() {
     list.appendChild(el);
   }
 }
-$('shop-btn').onclick = () => { renderShop(); $('title-overlay').classList.add('hidden'); $('shop-overlay').classList.remove('hidden'); };
-$('shop-close-btn').onclick = () => { $('shop-overlay').classList.add('hidden'); $('title-overlay').classList.remove('hidden'); };
+// ショップはタイトル/ゲームオーバー/一時停止のどこからでも開ける。閉じたら元の画面へ戻る。
+let shopReturnTo = 'title-overlay';
+function openShop(fromId) {
+  shopReturnTo = fromId;
+  renderShop();
+  $(fromId).classList.add('hidden');
+  $('shop-overlay').classList.remove('hidden');
+}
+$('shop-btn').onclick = () => openShop('title-overlay');
+$('gameover-shop-btn').onclick = () => openShop('gameover-overlay');
+$('pause-shop-btn').onclick = () => openShop('pause-overlay');
+$('shop-close-btn').onclick = () => { $('shop-overlay').classList.add('hidden'); $(shopReturnTo).classList.remove('hidden'); };
 
 bindAudioBtn($('bgm-btn'), $('bgm-vol'), () => audio.bgmOn, v => audio.setBgm(v));
 bindAudioBtn($('sfx-btn'), $('sfx-vol'), () => audio.sfxOn, v => audio.setSfx(v));
