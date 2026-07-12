@@ -147,7 +147,6 @@ export class Game {
       this.jumpAction = this.actions['Jump_Run'] ?? null;
       this.leapAction = this.actions['Leap_of_Faith'] ?? null;   // 竜騎乗: 信仰の飛躍
       this.knockAction = this.actions['Knock_Down'] ?? null;     // 被弾: ノックダウン
-      this.slideAction = this.actions['RunFast'] ?? this.runAction; // スライディング: 走りポーズを寝かせて足から滑る
       if (this.leapAction) { this.leapAction.setLoop(THREE.LoopOnce); this.leapAction.clampWhenFinished = true; }
       if (this.knockAction) { this.knockAction.setLoop(THREE.LoopOnce); this.knockAction.clampWhenFinished = true; }
       this.currentAction = this.runAction;
@@ -444,22 +443,18 @@ export class Game {
       this.playerModel.position.y = this.mixer ? 0 : Math.abs(Math.sin(this.time * 11)) * 0.09;
     }
     // アニメーション状態マシン
+    // スライディングは走りアニメを流したまま体を寝かせて表現する(専用ポーズ固定はしない)。
+    // RunFastを凍結すると走りアクションと同一実体のため脚が止まってしまうため。
     if (this.mixer) {
       let desired = this.runAction;
       let scale = this.speed / 10; // 走りは速度連動
       if (this.state === 'dragon' && this.leapAction) {
         desired = this.leapAction; scale = 1;
-      } else if (this.sliding > 0 && this.slideAction) {
-        desired = this.slideAction; scale = 1;
       } else if (this.jumpAction && this.state === 'run' && this.y > 0.05 && this.climbing <= 0) {
-        desired = this.jumpAction;
+        desired = this.jumpAction; scale = 1;
       }
       if (desired && this.currentAction !== desired) {
         desired.reset().crossFadeFrom(this.currentAction, desired === this.leapAction ? 0.35 : 0.12, false).play();
-        // スライディング: 走りポーズの脚を伸ばした瞬間で固定(姿勢はrotationで寝かせる)
-        if (desired === this.slideAction && this.state !== 'dragon') {
-          desired.time = desired.getClip().duration * 0.3; desired.paused = true;
-        }
         // 信仰の飛躍: 終盤のスカイダイビングポーズ(4.6s)へ即移行→キープ
         if (desired === this.leapAction && this.state === 'dragon') {
           desired.time = 4.6; desired.paused = true;
@@ -468,6 +463,8 @@ export class Game {
       }
       // 降下開始で飛躍キープ解除→着地モーションの続きを再生
       if (this.state === 'dragon' && this.leapAction && this.dragonT <= 1.2) this.leapAction.paused = false;
+      // 走りに戻ったのに一時停止が残っていたら解除(保険)
+      if (this.currentAction === this.runAction && this.runAction.paused) this.runAction.paused = false;
       this.mixer.update(dt * scale);
     }
     // 墨のオーラ
